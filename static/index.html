@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoPulse AI // World Geopolitics Intelligence & Real-Time Conflict Radar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
+
+    <!-- Top Command HUD (Bright & Crisp) -->
+    <header class="bg-white/95 border-b border-slate-200 sticky top-0 z-40 backdrop-blur-md px-4 py-3 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <!-- Brand / Logo -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-sky-500/30">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black tracking-wider text-base text-slate-900 font-mono">GEOPULSE<span class="text-sky-600">.AI</span></span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping"></span>
+                                <span>LIVE 60s RADAR</span>
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 font-mono font-medium">REAL-TIME GLOBAL CONFLICT MONITOR</p>
+                    </div>
+                </div>
+                <div id="utc-clock" class="font-mono text-xs text-sky-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 md:hidden font-semibold"></div>
+            </div>
+
+            <!-- Global Tension Gauge & Audio Visualizer -->
+            <div class="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200 w-full md:w-auto justify-center shadow-inner">
+                <!-- Global Equalizer -->
+                <div id="global-soundwave" class="hidden flex items-center gap-1 px-2 border-r border-slate-200">
+                    <span class="wave-bar w-1 bg-sky-500 rounded-full"></span>
+                    <span class="wave-bar w-1 bg-sky-500 rounded-full"></span>
+                    <span class="wave-bar w-1 bg-sky-500 rounded-full"></span>
+                    <span class="wave-bar w-1 bg-sky-500 rounded-full"></span>
+                    <span class="wave-bar w-1 bg-sky-500 rounded-full"></span>
+                    <span class="text-[10px] font-mono font-bold text-sky-700 ml-1">VOICE ACTIVE</span>
+                </div>
+
+                <div class="text-right">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-500 font-mono font-semibold">Global Threat Level</div>
+                    <div id="tension-score" class="text-xs font-mono font-bold text-amber-600">77.5 / 100</div>
+                </div>
+                <div class="w-24 bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div id="tension-bar" class="bg-gradient-to-r from-amber-500 to-red-500 h-2.5 rounded-full transition-all duration-500" style="width: 77%;"></div>
+                </div>
+                <span id="defcon-badge" class="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-800 border-amber-300">
+                    DEFCON 3
+                </span>
+            </div>
+
+            <!-- Controls: Auto-Voice Toggle, Settings, Clock & Search -->
+            <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
+                <button id="btn-auto-speak-toggle" onclick="toggleAutoSpeak()" class="text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold transition flex items-center gap-1 shadow-sm" title="Toggle voice playback">
+                    <span>?? Voice</span>
+                </button>
+                <button onclick="openChatSettings()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono border border-slate-200 transition shadow-sm" title="Configure AI Model">
+                    <span>??</span>
+                    <span id="chat-engine-badge" class="text-[10px] font-bold text-sky-700">Engine: RAG</span>
+                </button>
+                <div id="utc-clock" class="hidden md:block font-mono text-xs text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-semibold shadow-inner"></div>
+                <div class="relative w-full md:w-52">
+                    <input id="global-search" type="text" placeholder="Search nation, conflict..." class="w-full bg-slate-50 border border-slate-200 text-xs text-slate-900 rounded-lg px-3 py-2 pl-8 focus:outline-none focus:border-sky-500 transition font-mono">
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-slate-200 px-4 shadow-sm">
+        <div class="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto py-2 text-xs font-semibold font-mono scrollbar-none">
+            <button class="nav-tab active flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 hover:text-sky-600 transition" data-tab="map">
+                <span>??</span> Situation Room (Map)
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-red-700 hover:text-red-800 transition bg-red-50 border border-red-200 shadow-sm" data-tab="news">
+                <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                <span>?? Live Conflict Wire (60s)</span>
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sky-700 hover:text-sky-800 transition bg-sky-50 border border-sky-200 shadow-sm" data-tab="ai">
+                <span class="text-sm">???</span> GeoPulse AI & Voice
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition" data-tab="conflicts">
+                <span>??</span> Flashpoints & Conflicts
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition" data-tab="alliances">
+                <span>???</span> Alliances & Blocs
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition" data-tab="chokepoints">
+                <span>?</span> Maritime Chokepoints
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition" data-tab="countries">
+                <span>??</span> Country Dossiers
+            </button>
+            <button class="nav-tab flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition" data-tab="scenarios">
+                <span>?</span> Crisis Sandbox
+            </button>
+        </div>
+    </nav>
+
+    <!-- Global Breaking Conflict Marquee Ticker -->
+    <div id="breaking-ticker-container" class="ticker-flash-alert border-b border-red-200 px-4 py-2 cursor-pointer transition shadow-inner">
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 text-xs font-mono">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                <span class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600 text-white font-bold text-[10px] uppercase shrink-0 shadow-sm shadow-red-500/40">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                    <span>BREAKING CONFLICT</span>
+                </span>
+                <span id="breaking-ticker-conflict" class="font-bold text-red-800 bg-red-100 px-2 py-0.5 rounded text-[11px] shrink-0">INITIALIZING...</span>
+                <span id="breaking-ticker-headline" class="text-slate-900 font-bold truncate">Connecting to real-time international security wire...</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="breaking-ticker-time" class="text-red-700 font-bold bg-white px-2 py-0.5 rounded border border-red-200 text-[10px]">Just now</span>
+                <span class="text-slate-500 text-[11px] hidden sm:inline">&rarr; Open Live Wire</span>
+            </div>
+        </div>
+    </div>
+    <!-- Main Views Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col">
+
+        <!-- 1. MAP VIEW (SITUATION ROOM) -->
+        <section id="view-map" class="view-section flex-1 flex flex-col gap-4">
+            <!-- Ticker Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-mono font-semibold">Active Flashpoints</span>
+                        <div id="count-conflicts" class="text-xl font-bold font-mono text-red-600">12</div>
+                    </div>
+                    <span class="text-2xl p-2 rounded-xl bg-red-50 text-red-600">??</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-mono font-semibold">Chokepoints Monitored</span>
+                        <div id="count-chokepoints" class="text-xl font-bold font-mono text-cyan-700">8</div>
+                    </div>
+                    <span class="text-2xl p-2 rounded-xl bg-cyan-50 text-cyan-600">?</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-mono font-semibold">Tracked Blocs</span>
+                        <div id="count-alliances" class="text-xl font-bold font-mono text-indigo-700">8</div>
+                    </div>
+                    <span class="text-2xl p-2 rounded-xl bg-indigo-50 text-indigo-600">???</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-mono font-semibold">Nuclear Arsenals</span>
+                        <div id="count-nuclear" class="text-xl font-bold font-mono text-purple-700">9</div>
+                    </div>
+                    <span class="text-2xl p-2 rounded-xl bg-purple-50 text-purple-600">??</span>
+                </div>
+            </div>
+
+            <!-- Interactive Map Wrapper with Floating HUD Controls -->
+            <div class="relative flex-1 min-h-[550px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-md bg-slate-100">
+                <div id="map-container" class="w-full h-full min-h-[550px] z-0"></div>
+
+                <!-- Floating Layer Toggles -->
+                <div class="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200 shadow-lg space-y-2 text-xs font-mono">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1.5 mb-1.5 flex items-center justify-between gap-3">
+                        <span>Cartographic Layers</span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    </div>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 font-medium">
+                        <input id="layer-conflicts" type="checkbox" checked class="rounded border-slate-300 text-red-600 focus:ring-0">
+                        <span class="flex items-center gap-1.5">?? Conflict Flashpoints</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 font-medium">
+                        <input id="layer-chokepoints" type="checkbox" checked class="rounded border-slate-300 text-cyan-600 focus:ring-0">
+                        <span class="flex items-center gap-1.5">? Maritime Chokepoints</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 font-medium">
+                        <input id="layer-nuclear" type="checkbox" checked class="rounded border-slate-300 text-purple-600 focus:ring-0">
+                        <span class="flex items-center gap-1.5">?? Nuclear Armed States</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. AI ANALYST & VOICE ASSISTANT VIEW -->
+        <section id="view-ai" class="view-section hidden flex-1 flex flex-col gap-4">
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                        <span class="text-sky-600 text-2xl">???</span> GeoPulse AI & Voice Strategic Advisor
+                    </h2>
+                    <p class="text-xs text-slate-500">Dual voice/text intelligence engine powered by RAG vector indexing across 60+ contemporary crisis nodes, treaties, and chokepoints.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="toggleAutoSpeak()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono font-bold border border-slate-200 transition flex items-center gap-1.5 shadow-sm">
+                        <span>?? Auto-Speech</span>
+                    </button>
+                    <button onclick="openChatSettings()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-mono font-bold border border-slate-200 transition flex items-center gap-1.5 shadow-sm">
+                        <span>?? Model Settings</span>
+                    </button>
+                    <button onclick="sendChatMessage('Provide an executive summary of current global geopolitical flashpoints', 'tab')" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono font-bold transition shadow-sm">
+                        ? Quick Briefing
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Message Window -->
+            <div class="glass-panel-glow rounded-2xl border border-sky-200 flex-1 flex flex-col overflow-hidden min-h-[540px]">
+                <div id="chat-tab-messages" class="flex-1 overflow-y-auto p-5 space-y-4 max-h-[600px] bg-slate-50/50"></div>
+
+                <!-- Input Area with Mic Button -->
+                <div class="p-4 border-t border-slate-200 bg-white">
+                    <div class="flex items-center gap-2.5">
+                        <button onclick="toggleVoiceInput('chat-tab-input')" class="btn-voice-mic p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold transition flex items-center justify-center shrink-0 shadow-sm" title="Click to speak (Voice-to-Text)">
+                            ??
+                        </button>
+                        <input id="chat-tab-input" type="text" placeholder="Type or click ?? to speak (e.g. 'What happens if the Strait of Hormuz is closed?')..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 transition font-mono">
+                        <button id="chat-tab-send" class="px-5 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold transition flex items-center gap-2 shadow-md shadow-sky-600/30 shrink-0">
+                            <span>SEND</span> &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- 3. CONFLICTS VIEW -->
+        <section id="view-conflicts" class="view-section hidden space-y-4">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                        <span class="text-red-500">??</span> Active Geopolitical Flashpoints & Conflicts
+                    </h2>
+                    <p class="text-xs text-slate-500">Real-time status, escalation probabilities, and primary combatants across global fault lines.</p>
+                </div>
+                <!-- Region Filter Pills -->
+                <div class="flex flex-wrap gap-1.5 text-xs">
+                    <button onclick="setConflictRegionFilter('All')" class="btn-conflict-reg filter-btn active px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">All</button>
+                    <button onclick="setConflictRegionFilter('Eastern Europe')" class="btn-conflict-reg filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Eastern Europe</button>
+                    <button onclick="setConflictRegionFilter('Middle East')" class="btn-conflict-reg filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Middle East</button>
+                    <button onclick="setConflictRegionFilter('East Asia')" class="btn-conflict-reg filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">East Asia</button>
+                    <button onclick="setConflictRegionFilter('Sub-Saharan Africa')" class="btn-conflict-reg filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Africa</button>
+                    <button onclick="setConflictRegionFilter('South Asia / Himalayas')" class="btn-conflict-reg filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">South Asia</button>
+                </div>
+            </div>
+            <div id="conflicts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- 4. ALLIANCES VIEW -->
+        <section id="view-alliances" class="view-section hidden space-y-4">
+            <div class="border-b border-slate-200 pb-3">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                    <span class="text-indigo-600">???</span> International Alliances & Power Blocs
+                </h2>
+                <p class="text-xs text-slate-500">Comparing Western collective defense architecture with emerging Global South & Eurasian counterweights.</p>
+            </div>
+            <div id="alliances-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- 5. CHOKEPOINTS VIEW -->
+        <section id="view-chokepoints" class="view-section hidden space-y-4">
+            <div class="border-b border-slate-200 pb-3">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                    <span class="text-cyan-600">?</span> Strategic Maritime & Energy Chokepoints
+                </h2>
+                <p class="text-xs text-slate-500">Critical sea lines of communication (SLOCs) carrying the world's hydrocarbon supplies and manufactured goods.</p>
+            </div>
+            <div id="chokepoints-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- 6. COUNTRIES VIEW -->
+        <section id="view-countries" class="view-section hidden space-y-4">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                        <span class="text-emerald-600">??</span> Comprehensive Country Geopolitical Dossiers
+                    </h2>
+                    <p class="text-xs text-slate-500">Military balance, defense expenditures, nuclear triad capabilities, and strategic alignment.</p>
+                </div>
+                <!-- Alignment Filter Pills -->
+                <div class="flex flex-wrap gap-1.5 text-xs">
+                    <button onclick="setCountryAlignmentFilter('All')" class="btn-country-align filter-btn active px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">All</button>
+                    <button onclick="setCountryAlignmentFilter('Western-Aligned')" class="btn-country-align filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Western-Aligned</button>
+                    <button onclick="setCountryAlignmentFilter('Eastern-Aligned')" class="btn-country-align filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Eastern-Aligned</button>
+                    <button onclick="setCountryAlignmentFilter('Non-Aligned & Multi-Aligned')" class="btn-country-align filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold">Non-Aligned / Multi-Aligned</button>
+                </div>
+            </div>
+            <div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+        <!-- 7. LIVE CONFLICT WIRE (60s REAL-TIME UPDATES) -->
+        <section id="view-news" class="view-section hidden space-y-4">
+            <!-- Real-Time Radar Header & 60-Second Countdown HUD -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-mono font-bold border border-red-200 animate-pulse">
+                                <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                                <span>LIVE RADAR ACTIVE</span>
+                            </span>
+                            <span class="text-xs text-slate-500 font-mono font-semibold">Updating every 60 seconds</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                            <span>??</span> Real-Time World Conflict Wire
+                        </h2>
+                    </div>
+
+                    <!-- 60s Countdown & Tactical Sync Controls -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 flex items-center gap-2.5 shadow-inner">
+                            <div class="text-right">
+                                <span class="text-[10px] uppercase text-slate-400 font-mono font-bold block leading-none">Auto-Refresh</span>
+                                <span id="news-countdown-timer" class="text-xs font-mono font-black text-red-600">60s</span>
+                            </div>
+                            <div class="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div id="news-countdown-bar" class="bg-red-500 h-1.5 rounded-full transition-all duration-1000" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <button id="btn-sound-toggle" onclick="toggleAlertSound()" class="text-xs font-mono font-bold px-3 py-2 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 transition flex items-center gap-1 shadow-sm">
+                            <span>?? Audio Radar: ON</span>
+                        </button>
+
+                        <button id="btn-manual-sync" onclick="manualSyncNow()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-sky-600/30">
+                            <span>? Sync Now</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conflict Theater Filter Chips -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs font-mono">
+                    <span class="text-slate-400 text-xs font-bold mr-1 shrink-0">Theaters:</span>
+                    <button onclick="setConflictNewsFilter('All')" data-filter="All" class="btn-conflict-filter active px-3 py-1 rounded-full bg-sky-600 text-white font-bold text-xs shadow-sm shrink-0">All Conflicts</button>
+                    <button onclick="setConflictNewsFilter('Ukraine')" data-filter="Ukraine" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Ukraine-Russia</button>
+                    <button onclick="setConflictNewsFilter('Red Sea')" data-filter="Red Sea" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Red Sea / Bab-el-Mandeb</button>
+                    <button onclick="setConflictNewsFilter('Middle East')" data-filter="Middle East" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Middle East / Levant</button>
+                    <button onclick="setConflictNewsFilter('Taiwan')" data-filter="Taiwan" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Taiwan Strait</button>
+                    <button onclick="setConflictNewsFilter('Korea')" data-filter="Korea" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Korean DMZ</button>
+                    <button onclick="setConflictNewsFilter('Sudan')" data-filter="Sudan" class="btn-conflict-filter px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 shrink-0">Sudan & Sahel</button>
+                </div>
+            </div>
+
+            <!-- Live Real-Time Feed Container -->
+            <div id="news-feed-container" class="space-y-3.5 max-w-4xl mx-auto"></div>
+        </section>
+
+        <!-- 8. CRISIS SANDBOX VIEW -->
+        <section id="view-scenarios" class="view-section hidden space-y-4">
+            <div class="border-b border-slate-200 pb-3">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2 font-mono">
+                    <span class="text-amber-600">?</span> Crisis Sandbox // "What-If" War-Game Simulations
+                </h2>
+                <p class="text-xs text-slate-500">Model the macroeconomic, military, and supply chain ramifications of potential geopolitical tipping points.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div id="scenarios-list" class="space-y-3"></div>
+                <div id="scenario-detail" class="lg:col-span-2"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Slide-over Dossier Drawer -->
+    <aside id="side-drawer" class="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white border-l border-slate-200 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <span class="text-xs font-mono font-bold text-sky-700 tracking-wider">GEOPOLITICAL DOSSIER</span>
+            <button onclick="closeDrawer()" class="text-slate-500 hover:text-slate-800 p-1.5 rounded-lg bg-white border border-slate-200 shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="drawer-content" class="flex-1 overflow-y-auto p-5"></div>
+    </aside>
+
+    <!-- Floating Situation Room AI Voice Dock -->
+    <div id="chat-dock-container" class="fixed bottom-5 right-5 z-40 flex flex-col items-end">
+        <!-- Floating Collapsible Chat Panel -->
+        <div id="chat-dock-panel" class="hidden bg-white w-[380px] md:w-[440px] h-[520px] rounded-2xl border border-sky-200 shadow-2xl flex flex-col overflow-hidden mb-3 animate-fade-in">
+            <div class="p-3.5 bg-gradient-to-r from-sky-600 to-blue-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-white text-xs shadow-md">
+                        ???
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold font-mono text-white flex items-center gap-1.5">
+                            <span>GeoPulse AI Voice Analyst</span>
+                            <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                        </h4>
+                        <span class="text-[10px] text-sky-100 font-mono">Voice & RAG Assistant</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="openChatSettings()" class="text-sky-100 hover:text-white p-1 rounded hover:bg-white/10 text-xs" title="Settings">??</button>
+                    <button onclick="toggleChatDock()" class="text-sky-100 hover:text-white p-1 rounded hover:bg-white/10 text-xs font-bold">?</button>
+                </div>
+            </div>
+
+            <div id="chat-dock-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/70"></div>
+
+            <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+                <button onclick="toggleVoiceInput('chat-dock-input')" class="btn-voice-mic p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition shrink-0" title="Click to speak">
+                    ??
+                </button>
+                <input id="chat-dock-input" type="text" placeholder="Ask AI Analyst..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono">
+                <button id="chat-dock-send" class="p-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold transition shadow-sm">
+                    &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- Floating Orb Button -->
+        <button id="chat-orb-btn" onclick="toggleChatDock()" class="ai-orb-glow flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-sky-600 to-blue-600 border-2 border-white text-white font-mono text-xs font-bold shadow-xl transition hover:scale-105 active:scale-95">
+            <span class="text-base">???</span>
+            <span>GeoPulse Voice AI</span>
+        </button>
+    </div>
+
+    <!-- AI & LLM Settings Modal -->
+    <div id="chat-settings-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl border border-slate-200 p-6 shadow-2xl text-slate-800">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+                <h3 class="text-sm font-bold font-mono text-slate-900 flex items-center gap-2">
+                    <span>??</span> LLM & Voice Engine Configuration
+                </h3>
+                <button onclick="closeChatSettings()" class="text-slate-400 hover:text-slate-700 text-sm font-bold">&times;</button>
+            </div>
+
+            <div class="space-y-4 text-xs font-mono">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Inference Provider</label>
+                    <select id="setting-provider" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500">
+                        <option value="builtin">Built-in Strategic RAG Engine (Zero Setup / Offline)</option>
+                        <option value="openai">OpenAI (GPT-4o-mini / GPT-4o)</option>
+                        <option value="groq">Groq Cloud (Fast Llama-3.3)</option>
+                        <option value="ollama">Ollama Local (localhost:11434)</option>
+                        <option value="openrouter">OpenRouter API</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">API Key (Optional / Stored in Browser)</label>
+                    <input id="setting-apikey" type="password" placeholder="sk-..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500">
+                    <span class="text-[10px] text-slate-500 mt-1 block font-medium">Not needed for Built-in Engine. Stored only in your local browser storage.</span>
+                </div>
+
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">Model Name</label>
+                    <input id="setting-model" type="text" placeholder="gpt-4o-mini" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-200">
+                <button onclick="closeChatSettings()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold font-mono">Cancel</button>
+                <button onclick="saveChatSettings()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold font-mono shadow-sm">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500 font-mono">
+        GeoPulse AI Geopolitics Situation Room &bull; Real-Time 60-Second Conflict Radar & Voice Platform
+    </footer>
+
+    <!-- Modular Scripts -->
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/map.js"></script>
+    <script src="/static/js/views.js"></script>
+    <script src="/static/js/drawer.js"></script>
+    <script src="/static/js/voice.js"></script>
+    <script src="/static/js/realtime_news.js"></script>
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
